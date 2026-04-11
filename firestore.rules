@@ -1,0 +1,68 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: contact_submissions
+    // Document ID: auto-generated
+    // Fields:
+    //   - firstName: string (required, < 50 chars)
+    //   - lastName: string (required, < 50 chars)
+    //   - email: string (required, valid email)
+    //   - subject: string (required, < 100 chars)
+    //   - message: string (required, < 2000 chars)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidContactSubmission(data) {
+      return hasOnlyAllowedFields(['firstName', 'lastName', 'email', 'subject', 'message', 'createdAt']) &&
+             data.firstName is string && data.firstName.size() > 0 && data.firstName.size() <= 50 &&
+             data.lastName is string && data.lastName.size() > 0 && data.lastName.size() <= 50 &&
+             isValidEmail(data.email) &&
+             data.subject is string && data.subject.size() > 0 && data.subject.size() <= 100 &&
+             data.message is string && data.message.size() > 0 && data.message.size() <= 2000 &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /contact_submissions/{submissionId} {
+      // Anyone can submit a contact form
+      allow create: if isValidContactSubmission(request.resource.data);
+      // No one can read, update, or delete from the client
+      allow read, update, delete: if false;
+    }
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -165,7 +165,7 @@ export function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobile
           <div className="bg-white/5 rounded-2xl p-4 text-center">
             <p className="text-sm text-primary-foreground/80 mb-3">Need immediate help?</p>
             <a 
-              href="tel:+97712345678" 
+              href="tel:+9779841737795" 
               className="inline-flex items-center justify-center gap-2 w-full bg-white text-primary font-semibold py-2 rounded-lg hover:bg-accent hover:text-white transition-colors"
             >
               <Phone size={16} /> Call Us

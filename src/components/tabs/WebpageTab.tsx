@@ -1,7 +1,12 @@
 import { SEO } from '../SEO';
 import { ArrowRight, Building2, HardHat, Ruler, Paintbrush } from 'lucide-react';
+import { TabType } from '../Sidebar';
 
-export function WebpageTab() {
+interface WebpageTabProps {
+  setActiveTab: (tab: TabType) => void;
+}
+
+export function WebpageTab({ setActiveTab }: WebpageTabProps) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <SEO 
@@ -22,7 +27,10 @@ export function WebpageTab() {
           <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl">
             Our goal then and now is to provide quality on-time projects. We specialize in residential, commercial, and industrial construction.
           </p>
-          <button className="bg-accent hover:bg-accent/90 text-accent-foreground px-8 py-4 rounded-full font-semibold flex items-center gap-2 transition-transform hover:scale-105 active:scale-95">
+          <button 
+            onClick={() => setActiveTab('contact')}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground px-8 py-4 rounded-full font-semibold flex items-center gap-2 transition-transform hover:scale-105 active:scale-95"
+          >
             Get Free Quote <ArrowRight size={20} />
           </button>
         </div>

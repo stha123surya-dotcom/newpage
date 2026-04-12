@@ -21,10 +21,31 @@ export function ContactTab() {
     setIsSubmitting(true);
     
     try {
+      // 1. Save to Firebase Database (as a backup)
       await addDoc(collection(db, 'contact_submissions'), {
         ...formData,
         createdAt: serverTimestamp()
       });
+
+      // 2. Send Email directly to your inbox via FormSubmit
+      // Note: The first time this runs, you will receive an activation email from FormSubmit.
+      // You MUST click "Activate" in that email for future messages to come through.
+      await fetch("https://formsubmit.co/ajax/stha123surya@gmail.com", {
+        method: "POST",
+        headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            name: `${formData.firstName} ${formData.lastName}`,
+            email: formData.email,
+            subject: formData.subject,
+            message: formData.message,
+            _subject: `New Website Inquiry: ${formData.subject}`, // Email subject line
+            _template: "table" // Formats the email nicely
+        })
+      });
+
       setIsSuccess(true);
       setFormData({ firstName: '', lastName: '', email: '', subject: '', message: '' });
       setTimeout(() => setIsSuccess(false), 5000);
@@ -69,7 +90,7 @@ export function ContactTab() {
                 <div>
                   <h4 className="font-semibold mb-1">Our Location</h4>
                   <p className="text-primary-foreground/70 leading-relaxed">
-                    Kathmandu, Nepal<br />
+                    Lalitpur, Nepal<br />
                     Bagmati Province
                   </p>
                 </div>
@@ -82,8 +103,8 @@ export function ContactTab() {
                 <div>
                   <h4 className="font-semibold mb-1">Phone Number</h4>
                   <p className="text-primary-foreground/70">
-                    +977 1-2345678<br />
-                    +977 9800000000
+                    +977 9841737795<br />
+                    +977 9849105107
                   </p>
                 </div>
               </div>
@@ -107,7 +128,7 @@ export function ContactTab() {
                 <div>
                   <h4 className="font-semibold mb-1">Working Hours</h4>
                   <p className="text-primary-foreground/70">
-                    Sun - Fri: 9:00 AM - 6:00 PM<br />
+                    Sun - Fri: 10:00 AM - 5:00 PM<br />
                     Saturday: Closed
                   </p>
                 </div>

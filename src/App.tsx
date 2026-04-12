@@ -15,13 +15,13 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'webpage': return <WebpageTab />;
+      case 'webpage': return <WebpageTab setActiveTab={setActiveTab} />;
       case 'tools': return <AppToolsTab selectedTool={selectedTool} setSelectedTool={setSelectedTool} />;
       case 'projects': return <ProjectsTab />;
       case 'blogs': return <BlogsTab />;
       case 'offers': return <OffersTab />;
       case 'contact': return <ContactTab />;
-      default: return <WebpageTab />;
+      default: return <WebpageTab setActiveTab={setActiveTab} />;
     }
   };
 

@@ -16,6 +16,18 @@ service cloud.firestore {
     //   - message: string (required, < 2000 chars)
     //   - createdAt: timestamp (required)
     //
+    // Collection: blogs
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required, < 200 chars)
+    //   - excerpt: string (required, < 500 chars)
+    //   - content: string (required, < 10000 chars)
+    //   - category: string (required, < 50 chars)
+    //   - image: string (required, valid url)
+    //   - author: string (required, < 100 chars)
+    //   - authorId: string (required, matches uid)
+    //   - createdAt: timestamp (required)
+    //
     // ===============================================================
 
     // ===============================================================
@@ -26,9 +38,24 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.email in ['stha123surya@gmail.com', 'neki123nki@gmail.com', 'info@snsbuilders.com.np'] &&
+             request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
     function isValidEmail(email) {
       return email is string &&
         email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string &&
+        (url.matches("^https://.*") || url.matches("^http://.*"));
     }
 
     function hasOnlyAllowedFields(fields) {
@@ -49,6 +76,18 @@ service cloud.firestore {
              data.createdAt is timestamp;
     }
 
+    function isValidBlog(data) {
+      return hasOnlyAllowedFields(['title', 'excerpt', 'content', 'category', 'image', 'author', 'authorId', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.excerpt is string && data.excerpt.size() > 0 && data.excerpt.size() <= 500 &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 10000 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 50 &&
+             isValidUrl(data.image) &&
+             data.author is string && data.author.size() > 0 && data.author.size() <= 100 &&
+             data.authorId is string && data.authorId == request.auth.uid &&
+             data.createdAt is timestamp;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -58,6 +97,16 @@ service cloud.firestore {
       allow create: if isValidContactSubmission(request.resource.data);
       // No one can read, update, or delete from the client
       allow read, update, delete: if false;
+    }
+
+    match /blogs/{blogId} {
+      // Anyone can read blogs
+      allow read: if true;
+      // Only admins can create blogs
+      allow create: if isAdmin() && isValidBlog(request.resource.data);
+      // Only admins can update or delete blogs
+      allow update: if isAdmin() && isValidBlog(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
     }
     
     // Default deny

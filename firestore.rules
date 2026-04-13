@@ -52,7 +52,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-             request.auth.token.email in ['stha123surya@gmail.com', 'neki123nki@gmail.com', 'info@snsbuilders.com.np'] &&
+             request.auth.token.email in ['nekichipalu@gmail.com', 'stha123surya@gmail.com', 'shapeandstructure@gmail.com'] &&
              request.auth.token.email_verified == true;
     }
 
@@ -112,6 +112,17 @@ service cloud.firestore {
              data.createdAt is timestamp;
     }
 
+    function isValidOffer(data) {
+      return hasOnlyAllowedFields(['title', 'description', 'features', 'validUntil', 'featured', 'authorId', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 1000 &&
+             data.features is list && data.features.size() <= 10 &&
+             data.validUntil is string && data.validUntil.size() > 0 && data.validUntil.size() <= 100 &&
+             data.featured is bool &&
+             data.authorId is string && data.authorId == request.auth.uid &&
+             data.createdAt is timestamp;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -140,6 +151,16 @@ service cloud.firestore {
       allow create: if isAdmin() && isValidProject(request.resource.data);
       // Only admins can update or delete projects
       allow update: if isAdmin() && isValidProject(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
+    match /offers/{offerId} {
+      // Anyone can read offers
+      allow read: if true;
+      // Only admins can create offers
+      allow create: if isAdmin() && isValidOffer(request.resource.data);
+      // Only admins can update or delete offers
+      allow update: if isAdmin() && isValidOffer(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
       allow delete: if isAdmin();
     }
     

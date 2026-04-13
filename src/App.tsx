@@ -41,7 +41,7 @@ export default function App() {
         <header className="lg:hidden flex items-center justify-between p-4 bg-primary text-primary-foreground sticky top-0 z-30 shadow-md">
           <div className="flex items-center gap-2">
             <img 
-              src="/logo.png" 
+              src="https://drive.google.com/uc?export=view&id=1HjURU1VvNpc2zSYNwzumvz9vg8nTaU0P" 
               alt="Logo" 
               className="h-8 w-auto object-contain drop-shadow-sm"
               onError={(e) => {
@@ -69,6 +69,11 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* Helper footer for Firebase Domain Authorization */}
+      <div className="fixed bottom-0 right-0 p-2 text-[10px] text-muted-foreground bg-surface/80 backdrop-blur-sm border-t border-l border-border rounded-tl-lg z-50">
+        Current Domain: <span className="font-mono select-all">{window.location.hostname}</span>
+      </div>
     </div>
   );
 }

@@ -28,8 +28,14 @@ export function AppToolsTab({ selectedTool, setSelectedTool }: AppToolsTabProps)
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error);
+      if (error.code === 'auth/unauthorized-domain' || error.message?.includes('unauthorized-domain')) {
+        const domain = window.location.hostname;
+        alert(`ACTION REQUIRED: Unauthorized Domain\n\nFirebase is blocking the login because this exact URL is not authorized yet.\n\nPlease copy this exact text:\n${domain}\n\nAnd add it to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+      } else {
+        alert(`Login failed: ${error.message}`);
+      }
     }
   };
 

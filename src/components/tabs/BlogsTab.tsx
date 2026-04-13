@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SEO } from '../SEO';
-import { Calendar, User, ArrowRight, LogIn, LogOut, Plus, Edit, Trash2, X, Share2, ArrowLeft } from 'lucide-react';
+import { Calendar, User, ArrowRight, Plus, Edit, Trash2, X, Share2, ArrowLeft, LogIn, LogOut } from 'lucide-react';
 import { auth, db } from '../../firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -41,7 +41,7 @@ export function BlogsTab() {
   const [loading, setLoading] = useState(true);
   const [viewingBlog, setViewingBlog] = useState<Blog | null>(null);
   
-  const ADMIN_EMAILS = ['stha123surya@gmail.com', 'neki123nki@gmail.com', 'info@snsbuilders.com.np'];
+  const ADMIN_EMAILS = ['nekichipalu@gmail.com', 'stha123surya@gmail.com', 'shapeandstructure@gmail.com'];
   const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email) : false;
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -113,8 +113,14 @@ export function BlogsTab() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error);
+      if (error.code === 'auth/unauthorized-domain' || error.message?.includes('unauthorized-domain')) {
+        const domain = window.location.hostname;
+        alert(`ACTION REQUIRED: Unauthorized Domain\n\nFirebase is blocking the login because this exact URL is not authorized yet.\n\nPlease copy this exact text:\n${domain}\n\nAnd add it to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+      } else {
+        alert(`Login failed: ${error.message}`);
+      }
     }
   };
 

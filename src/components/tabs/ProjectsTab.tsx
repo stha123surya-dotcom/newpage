@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SEO } from '../SEO';
-import { MapPin, Calendar, ArrowRight, LogIn, LogOut, Plus, Edit, Trash2, X } from 'lucide-react';
+import { MapPin, Calendar, ArrowRight, Plus, Edit, Trash2, X, LogIn, LogOut } from 'lucide-react';
 import { auth, db } from '../../firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
@@ -39,7 +39,7 @@ export function ProjectsTab() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const ADMIN_EMAILS = ['stha123surya@gmail.com', 'neki123nki@gmail.com', 'info@snsbuilders.com.np'];
+  const ADMIN_EMAILS = ['nekichipalu@gmail.com', 'stha123surya@gmail.com', 'shapeandstructure@gmail.com'];
   const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email) : false;
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -83,8 +83,14 @@ export function ProjectsTab() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error);
+      if (error.code === 'auth/unauthorized-domain' || error.message?.includes('unauthorized-domain')) {
+        const domain = window.location.hostname;
+        alert(`ACTION REQUIRED: Unauthorized Domain\n\nFirebase is blocking the login because this exact URL is not authorized yet.\n\nPlease copy this exact text:\n${domain}\n\nAnd add it to Firebase Console -> Authentication -> Settings -> Authorized Domains.`);
+      } else {
+        alert(`Login failed: ${error.message}`);
+      }
     }
   };
 

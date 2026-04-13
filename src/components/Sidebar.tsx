@@ -87,7 +87,7 @@ export function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobile
         <div className="p-6 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-3">
             <img 
-              src="/logo.png" 
+              src="https://drive.google.com/uc?export=view&id=1HjURU1VvNpc2zSYNwzumvz9vg8nTaU0P" 
               alt="Shape & Structure Builders Logo" 
               className="h-12 w-auto object-contain drop-shadow-md transition-transform hover:scale-105 duration-300"
               onError={(e) => {

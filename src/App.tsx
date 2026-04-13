@@ -40,10 +40,19 @@ export default function App() {
         {/* Mobile Header */}
         <header className="lg:hidden flex items-center justify-between p-4 bg-primary text-primary-foreground sticky top-0 z-30 shadow-md">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-accent rounded-md flex items-center justify-center font-bold text-sm">
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="h-8 w-auto object-contain drop-shadow-sm"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+            <div className="hidden w-8 h-8 bg-accent rounded-md flex items-center justify-center font-bold text-sm shadow-sm">
               S&S
             </div>
-            <span className="font-bold">Shape & Structure</span>
+            <span className="font-bold tracking-wide">Shape & Structure</span>
           </div>
           <button 
             onClick={() => setIsMobileMenuOpen(true)}

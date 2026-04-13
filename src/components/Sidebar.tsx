@@ -86,12 +86,22 @@ export function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobile
         {/* Logo Area */}
         <div className="p-6 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center font-bold text-xl">
+            <img 
+              src="/logo.png" 
+              alt="Shape & Structure Builders Logo" 
+              className="h-12 w-auto object-contain drop-shadow-md transition-transform hover:scale-105 duration-300"
+              onError={(e) => {
+                // Fallback if image is not yet uploaded
+                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+            <div className="hidden w-10 h-10 bg-accent rounded-lg flex items-center justify-center font-bold text-xl shadow-md">
               S&S
             </div>
             <div>
-              <h2 className="font-bold text-lg leading-tight">Shape & Structure</h2>
-              <p className="text-xs text-primary-foreground/60 uppercase tracking-wider">Builders</p>
+              <h2 className="font-bold text-lg leading-tight tracking-wide">Shape & Structure</h2>
+              <p className="text-xs text-primary-foreground/60 uppercase tracking-widest font-medium mt-0.5">Builders</p>
             </div>
           </div>
           <button 

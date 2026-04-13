@@ -32,12 +32,52 @@
         }
       },
       "required": ["firstName", "lastName", "email", "subject", "message", "createdAt"]
+    },
+    "Blog": {
+      "title": "Blog",
+      "description": "A blog post.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string" },
+        "image": { "type": "string", "format": "uri" },
+        "author": { "type": "string" },
+        "authorId": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["title", "excerpt", "content", "category", "image", "author", "authorId", "createdAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A construction project.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "location": { "type": "string" },
+        "date": { "type": "string" },
+        "image": { "type": "string", "format": "uri" },
+        "description": { "type": "string" },
+        "authorId": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["title", "category", "location", "date", "image", "description", "authorId", "createdAt"]
     }
   },
   "firestore": {
     "/contact_submissions/{submissionId}": {
       "schema": { "$ref": "#/entities/ContactSubmission" },
       "description": "Stores contact form submissions."
+    },
+    "/blogs/{blogId}": {
+      "schema": { "$ref": "#/entities/Blog" },
+      "description": "Stores blog posts."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Stores construction projects."
     }
   }
 }

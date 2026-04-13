@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SEO } from '../SEO';
-import { Calendar, User, ArrowRight, LogIn, LogOut, Plus, Edit, Trash2, Image as ImageIcon, X } from 'lucide-react';
+import { Calendar, User, ArrowRight, LogIn, LogOut, Plus, Edit, Trash2, Image as ImageIcon, X, Share2, ArrowLeft } from 'lucide-react';
 import { auth, db, storage } from '../../firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
@@ -24,6 +24,7 @@ export function BlogsTab() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingBlog, setViewingBlog] = useState<Blog | null>(null);
   
   const ADMIN_EMAILS = ['stha123surya@gmail.com', 'neki123nki@gmail.com', 'info@snsbuilders.com.np'];
   const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email) : false;
@@ -39,6 +40,24 @@ export function BlogsTab() {
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleShare = async (blog: Blog) => {
+    const shareData = {
+      title: blog.title,
+      text: blog.excerpt,
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      navigator.clipboard.writeText(`${blog.title}\n${window.location.href}`);
+      alert('Link copied to clipboard!');
+    }
+  };
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -173,6 +192,84 @@ export function BlogsTab() {
 
   if (loading) {
     return <div className="flex justify-center p-12"><div className="animate-spin w-8 h-8 border-4 border-accent border-t-transparent rounded-full"></div></div>;
+  }
+
+  if (viewingBlog) {
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <SEO 
+          title={viewingBlog.title} 
+          description={viewingBlog.excerpt} 
+        />
+        <button 
+          onClick={() => setViewingBlog(null)}
+          className="mb-6 flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-medium"
+        >
+          <ArrowLeft size={16} /> Back to Blogs
+        </button>
+        
+        <article className="bg-surface rounded-3xl overflow-hidden border border-border shadow-sm">
+          <div className="w-full h-[400px] relative">
+            <img 
+              src={viewingBlog.image} 
+              alt={viewingBlog.title}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute top-6 left-6">
+              <span className="px-4 py-2 bg-white/90 backdrop-blur-sm text-primary text-sm font-bold uppercase tracking-wider rounded-full">
+                {viewingBlog.category}
+              </span>
+            </div>
+          </div>
+          
+          <div className="p-8 md:p-12">
+            <h1 className="text-3xl md:text-5xl font-bold mb-6">{viewingBlog.title}</h1>
+            
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-10 pb-6 border-b border-border">
+              <div className="flex items-center gap-6 text-muted-foreground">
+                <div className="flex items-center gap-2"><Calendar size={18} /> {viewingBlog.date}</div>
+                <div className="flex items-center gap-2"><User size={18} /> {viewingBlog.author}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => handleShare(viewingBlog)}
+                  className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-primary rounded-lg font-medium transition-colors"
+                >
+                  <Share2 size={18} /> Share
+                </button>
+                {isAdmin && (
+                  <>
+                    <button 
+                      onClick={() => {
+                        setViewingBlog(null);
+                        handleEdit(viewingBlog);
+                      }} 
+                      className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-md transition-colors"
+                    >
+                      <Edit size={18} />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        handleDelete(viewingBlog.id);
+                        setViewingBlog(null);
+                      }} 
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            <div className="prose prose-lg max-w-none text-muted-foreground whitespace-pre-wrap">
+              {viewingBlog.content}
+            </div>
+          </div>
+        </article>
+      </div>
+    );
   }
 
   return (
@@ -325,7 +422,10 @@ export function BlogsTab() {
               <span className="inline-block px-3 py-1 bg-accent text-white text-xs font-bold uppercase tracking-wider rounded-full mb-4">
                 {blogs[0].category}
               </span>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 group-hover:underline decoration-accent underline-offset-4 cursor-pointer">
+              <h2 
+                onClick={() => setViewingBlog(blogs[0])}
+                className="text-3xl md:text-4xl font-bold text-white mb-4 group-hover:underline decoration-accent underline-offset-4 cursor-pointer"
+              >
                 {blogs[0].title}
               </h2>
               <p className="text-white/80 line-clamp-2 mb-6 text-lg">
@@ -336,12 +436,27 @@ export function BlogsTab() {
                   <div className="flex items-center gap-2"><Calendar size={16} /> {blogs[0].date}</div>
                   <div className="flex items-center gap-2"><User size={16} /> {blogs[0].author}</div>
                 </div>
-                {isAdmin && (
-                  <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm p-2 rounded-lg">
-                    <button onClick={() => handleEdit(blogs[0])} className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"><Edit size={16} /></button>
-                    <button onClick={() => handleDelete(blogs[0].id)} className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-md transition-colors"><Trash2 size={16} /></button>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleShare(blogs[0])}
+                    className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
+                    title="Share"
+                  >
+                    <Share2 size={16} />
+                  </button>
+                  {isAdmin && (
+                    <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm p-2 rounded-lg mr-2">
+                      <button onClick={() => handleEdit(blogs[0])} className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"><Edit size={16} /></button>
+                      <button onClick={() => handleDelete(blogs[0].id)} className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-md transition-colors"><Trash2 size={16} /></button>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => setViewingBlog(blogs[0])}
+                    className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-bold hover:bg-accent/90 transition-colors"
+                  >
+                    Read Full Post
+                  </button>
+                </div>
               </div>
             </div>
           </article>
@@ -349,7 +464,10 @@ export function BlogsTab() {
           {/* Other Blogs */}
           {blogs.slice(1).map((blog) => (
             <article key={blog.id} className="group bg-surface rounded-3xl overflow-hidden border border-border hover:shadow-xl transition-all duration-300 flex flex-col">
-              <div className="relative h-64 overflow-hidden cursor-pointer">
+              <div 
+                className="relative h-64 overflow-hidden cursor-pointer"
+                onClick={() => setViewingBlog(blog)}
+              >
                 <img 
                   src={blog.image} 
                   alt={blog.title}
@@ -363,7 +481,10 @@ export function BlogsTab() {
                 </div>
               </div>
               <div className="p-8 flex flex-col flex-grow">
-                <h3 className="text-2xl font-bold mb-3 group-hover:text-accent transition-colors cursor-pointer">
+                <h3 
+                  className="text-2xl font-bold mb-3 group-hover:text-accent transition-colors cursor-pointer"
+                  onClick={() => setViewingBlog(blog)}
+                >
                   {blog.title}
                 </h3>
                 <p className="text-muted-foreground mb-6 flex-grow">
@@ -372,17 +493,28 @@ export function BlogsTab() {
                 <div className="flex items-center justify-between pt-6 border-t border-border">
                   <div className="flex items-center gap-4 text-muted-foreground text-sm">
                     <span className="flex items-center gap-1"><Calendar size={14} /> {blog.date}</span>
+                    <button 
+                      onClick={() => handleShare(blog)}
+                      className="hover:text-primary transition-colors flex items-center gap-1"
+                      title="Share"
+                    >
+                      <Share2 size={14} /> Share
+                    </button>
                   </div>
-                  {isAdmin ? (
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => handleEdit(blog)} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-md transition-colors"><Edit size={16} /></button>
-                      <button onClick={() => handleDelete(blog.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"><Trash2 size={16} /></button>
-                    </div>
-                  ) : (
-                    <span className="text-accent font-semibold flex items-center gap-1 group-hover:gap-2 transition-all cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    {isAdmin && (
+                      <>
+                        <button onClick={() => handleEdit(blog)} className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-md transition-colors"><Edit size={16} /></button>
+                        <button onClick={() => handleDelete(blog.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"><Trash2 size={16} /></button>
+                      </>
+                    )}
+                    <span 
+                      onClick={() => setViewingBlog(blog)}
+                      className="text-accent font-semibold flex items-center gap-1 group-hover:gap-2 transition-all cursor-pointer ml-2"
+                    >
                       Read More <ArrowRight size={16} />
                     </span>
-                  )}
+                  </div>
                 </div>
               </div>
             </article>

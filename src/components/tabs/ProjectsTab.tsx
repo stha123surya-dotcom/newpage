@@ -1,11 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { SEO } from '../SEO';
-import { MapPin, Calendar, ArrowRight, LogIn, LogOut, Plus, Edit, Trash2, Image as ImageIcon, X } from 'lucide-react';
-import { auth, db, storage } from '../../firebase';
+import { MapPin, Calendar, ArrowRight, LogIn, LogOut, Plus, Edit, Trash2, X } from 'lucide-react';
+import { auth, db } from '../../firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-errors';
+
+const formatImageUrl = (inputUrl: string) => {
+  if (!inputUrl) return '';
+  let url = inputUrl.trim();
+  // Auto-convert Google Drive share links to direct image links
+  const driveRegex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
+  const match = url.match(driveRegex);
+  if (match && match[1]) {
+    return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  }
+  // Auto-convert Dropbox links
+  if (url.includes('dropbox.com') && url.endsWith('?dl=0')) {
+    return url.replace('?dl=0', '?raw=1');
+  }
+  return url;
+};
 
 interface Project {
   id: string;
@@ -37,8 +52,8 @@ export function ProjectsTab() {
     description: '',
     image: ''
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -81,12 +96,6 @@ export function ProjectsTab() {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -94,12 +103,6 @@ export function ProjectsTab() {
 
     try {
       let imageUrl = formData.image;
-
-      if (imageFile) {
-        const storageRef = ref(storage, `project_images/${Date.now()}_${imageFile.name}`);
-        await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(storageRef);
-      }
 
       if (!imageUrl) {
         imageUrl = "https://picsum.photos/seed/project/800/600"; // Fallback image
@@ -132,7 +135,6 @@ export function ProjectsTab() {
       setIsFormOpen(false);
       setEditingId(null);
       setFormData({ title: '', category: '', location: '', date: '', description: '', image: '' });
-      setImageFile(null);
     } catch (error) {
       handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, 'projects');
     } finally {
@@ -153,14 +155,18 @@ export function ProjectsTab() {
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this project?")) {
-      try {
-        await deleteDoc(doc(db, 'projects', id));
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `projects/${id}`);
-      }
+  const confirmDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'projects', id));
+      setItemToDelete(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `projects/${id}`);
+      setItemToDelete(null);
     }
+  };
+
+  const handleDelete = (id: string) => {
+    setItemToDelete(id);
   };
 
   if (loading) {
@@ -277,17 +283,30 @@ export function ProjectsTab() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">Project Image</label>
-                <div className="flex items-center gap-4">
-                  <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-muted rounded-xl hover:bg-muted/80 transition-colors border border-border">
-                    <ImageIcon size={18} />
-                    <span className="text-sm font-medium">{imageFile ? imageFile.name : 'Upload Image'}</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                  </label>
-                  {!imageFile && formData.image && (
-                    <img src={formData.image} alt="Preview" className="h-10 w-10 object-cover rounded-lg" />
-                  )}
-                </div>
+                <label className="block text-sm font-semibold mb-1">Image URL (Google Drive, Dropbox, etc.)</label>
+                <input 
+                  type="url" 
+                  placeholder="Paste share link here..."
+                  value={formData.image} 
+                  onChange={e => setFormData({...formData, image: formatImageUrl(e.target.value)})}
+                  className="w-full px-4 py-2 rounded-xl border border-border bg-muted/50 focus:bg-surface focus:border-accent outline-none"
+                />
+                {formData.image && (
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                    <div className="relative h-32 w-48 rounded-lg border border-border overflow-hidden bg-muted flex items-center justify-center">
+                      <img 
+                        src={formData.image} 
+                        alt="Preview" 
+                        className="h-full w-full object-cover" 
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Invalid+Image+Link';
+                        }} 
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="pt-4 flex justify-end gap-4">
                 <button 
@@ -355,6 +374,30 @@ export function ProjectsTab() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {itemToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-surface w-full max-w-md rounded-3xl p-6 md:p-8 relative shadow-xl border border-border">
+            <h3 className="text-2xl font-bold mb-4">Confirm Deletion</h3>
+            <p className="text-muted-foreground mb-8">Are you sure you want to delete this project? This action cannot be undone.</p>
+            <div className="flex justify-end gap-4">
+              <button 
+                onClick={() => setItemToDelete(null)}
+                className="px-6 py-2 rounded-xl font-medium hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => confirmDelete(itemToDelete)}
+                className="px-6 py-2 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

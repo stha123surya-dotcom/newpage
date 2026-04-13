@@ -1,11 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { SEO } from '../SEO';
-import { Calendar, User, ArrowRight, LogIn, LogOut, Plus, Edit, Trash2, Image as ImageIcon, X, Share2, ArrowLeft } from 'lucide-react';
-import { auth, db, storage } from '../../firebase';
+import { Calendar, User, ArrowRight, LogIn, LogOut, Plus, Edit, Trash2, X, Share2, ArrowLeft } from 'lucide-react';
+import { auth, db } from '../../firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-errors';
+
+const formatImageUrl = (inputUrl: string) => {
+  if (!inputUrl) return '';
+  let url = inputUrl.trim();
+  // Auto-convert Google Drive share links to direct image links
+  const driveRegex = /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/;
+  const match = url.match(driveRegex);
+  if (match && match[1]) {
+    return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  }
+  // Auto-convert Dropbox links
+  if (url.includes('dropbox.com') && url.endsWith('?dl=0')) {
+    return url.replace('?dl=0', '?raw=1');
+  }
+  return url;
+};
 
 interface Blog {
   id: string;
@@ -38,8 +53,9 @@ export function BlogsTab() {
     category: '',
     image: ''
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleShare = async (blog: Blog) => {
     const shareData = {
@@ -55,7 +71,8 @@ export function BlogsTab() {
       }
     } else {
       navigator.clipboard.writeText(`${blog.title}\n${window.location.href}`);
-      alert('Link copied to clipboard!');
+      setCopiedId(blog.id);
+      setTimeout(() => setCopiedId(null), 2000);
     }
   };
 
@@ -109,12 +126,6 @@ export function BlogsTab() {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -122,12 +133,6 @@ export function BlogsTab() {
 
     try {
       let imageUrl = formData.image;
-
-      if (imageFile) {
-        const storageRef = ref(storage, `blog_images/${Date.now()}_${imageFile.name}`);
-        await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(storageRef);
-      }
 
       if (!imageUrl) {
         imageUrl = "https://picsum.photos/seed/construction/800/600"; // Fallback image
@@ -160,7 +165,6 @@ export function BlogsTab() {
       setIsFormOpen(false);
       setEditingId(null);
       setFormData({ title: '', excerpt: '', content: '', category: '', image: '' });
-      setImageFile(null);
     } catch (error) {
       handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, 'blogs');
     } finally {
@@ -180,14 +184,18 @@ export function BlogsTab() {
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this blog post?")) {
-      try {
-        await deleteDoc(doc(db, 'blogs', id));
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `blogs/${id}`);
-      }
+  const confirmDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'blogs', id));
+      setItemToDelete(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `blogs/${id}`);
+      setItemToDelete(null);
     }
+  };
+
+  const handleDelete = (id: string) => {
+    setItemToDelete(id);
   };
 
   if (loading) {
@@ -236,7 +244,7 @@ export function BlogsTab() {
                   onClick={() => handleShare(viewingBlog)}
                   className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-primary rounded-lg font-medium transition-colors"
                 >
-                  <Share2 size={18} /> Share
+                  <Share2 size={18} /> {copiedId === viewingBlog.id ? 'Copied!' : 'Share'}
                 </button>
                 {isAdmin && (
                   <>
@@ -372,17 +380,30 @@ export function BlogsTab() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">Featured Image</label>
-                <div className="flex items-center gap-4">
-                  <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-muted rounded-xl hover:bg-muted/80 transition-colors border border-border">
-                    <ImageIcon size={18} />
-                    <span className="text-sm font-medium">{imageFile ? imageFile.name : 'Upload Image'}</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                  </label>
-                  {!imageFile && formData.image && (
-                    <img src={formData.image} alt="Preview" className="h-10 w-10 object-cover rounded-lg" />
-                  )}
-                </div>
+                <label className="block text-sm font-semibold mb-1">Image URL (Google Drive, Dropbox, etc.)</label>
+                <input 
+                  type="url" 
+                  placeholder="Paste share link here..."
+                  value={formData.image} 
+                  onChange={e => setFormData({...formData, image: formatImageUrl(e.target.value)})}
+                  className="w-full px-4 py-2 rounded-xl border border-border bg-muted/50 focus:bg-surface focus:border-accent outline-none"
+                />
+                {formData.image && (
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                    <div className="relative h-32 w-48 rounded-lg border border-border overflow-hidden bg-muted flex items-center justify-center">
+                      <img 
+                        src={formData.image} 
+                        alt="Preview" 
+                        className="h-full w-full object-cover" 
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Invalid+Image+Link';
+                        }} 
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="pt-4 flex justify-end gap-4">
                 <button 
@@ -439,10 +460,10 @@ export function BlogsTab() {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => handleShare(blogs[0])}
-                    className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
+                    className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors flex items-center gap-2"
                     title="Share"
                   >
-                    <Share2 size={16} />
+                    <Share2 size={16} /> {copiedId === blogs[0].id && <span className="text-xs">Copied!</span>}
                   </button>
                   {isAdmin && (
                     <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm p-2 rounded-lg mr-2">
@@ -498,7 +519,7 @@ export function BlogsTab() {
                       className="hover:text-primary transition-colors flex items-center gap-1"
                       title="Share"
                     >
-                      <Share2 size={14} /> Share
+                      <Share2 size={14} /> {copiedId === blog.id ? 'Copied!' : 'Share'}
                     </button>
                   </div>
                   <div className="flex items-center gap-2">
@@ -519,6 +540,30 @@ export function BlogsTab() {
               </div>
             </article>
           ))}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {itemToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-surface w-full max-w-md rounded-3xl p-6 md:p-8 relative shadow-xl border border-border">
+            <h3 className="text-2xl font-bold mb-4">Confirm Deletion</h3>
+            <p className="text-muted-foreground mb-8">Are you sure you want to delete this blog post? This action cannot be undone.</p>
+            <div className="flex justify-end gap-4">
+              <button 
+                onClick={() => setItemToDelete(null)}
+                className="px-6 py-2 rounded-xl font-medium hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => confirmDelete(itemToDelete)}
+                className="px-6 py-2 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

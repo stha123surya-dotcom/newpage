@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Home, 
   Wrench, 
@@ -12,9 +12,12 @@ import {
   Ruler,
   Compass,
   Hammer,
-  Briefcase
+  Briefcase,
+  Eye
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { doc, updateDoc, setDoc, getDoc, increment, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export type TabType = 'webpage' | 'tools' | 'projects' | 'blogs' | 'offers' | 'contact';
 
@@ -29,6 +32,37 @@ interface SidebarProps {
 
 export function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen, selectedTool, setSelectedTool }: SidebarProps) {
   const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [visitCount, setVisitCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const visitDocRef = doc(db, 'stats', 'visits');
+
+    const recordVisit = async () => {
+      if (!sessionStorage.getItem('hasVisited')) {
+        try {
+          const docSnap = await getDoc(visitDocRef);
+          if (!docSnap.exists()) {
+            await setDoc(visitDocRef, { count: 1 });
+          } else {
+            await updateDoc(visitDocRef, { count: increment(1) });
+          }
+          sessionStorage.setItem('hasVisited', 'true');
+        } catch (error) {
+          console.error("Error recording visit:", error);
+        }
+      }
+    };
+
+    recordVisit();
+
+    const unsubscribe = onSnapshot(visitDocRef, (doc) => {
+      if (doc.exists()) {
+        setVisitCount(doc.data().count);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const navItems: Array<{
     id: string;
@@ -171,7 +205,7 @@ export function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobile
         </nav>
 
         {/* Footer Area */}
-        <div className="p-6 border-t border-white/10">
+        <div className="p-6 border-t border-white/10 flex flex-col gap-4">
           <div className="bg-white/5 rounded-2xl p-4 text-center">
             <p className="text-sm text-primary-foreground/80 mb-3">Need immediate help?</p>
             <a 
@@ -180,6 +214,18 @@ export function Sidebar({ activeTab, setActiveTab, isMobileMenuOpen, setIsMobile
             >
               <Phone size={16} /> Call Us
             </a>
+          </div>
+          
+          <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl border border-white/10">
+            <div className="p-2 bg-accent/20 text-accent rounded-lg">
+              <Eye size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] text-primary-foreground/60 font-medium uppercase tracking-wider">Total Visits</p>
+              <p className="text-lg font-bold text-white leading-none mt-1">
+                {visitCount !== null ? visitCount.toLocaleString() : '...'}
+              </p>
+            </div>
           </div>
         </div>
       </aside>

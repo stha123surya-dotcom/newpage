@@ -5,6 +5,7 @@ import { auth, db } from '../../firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-errors';
+import { LinkifyText } from '../LinkifyText';
 
 const formatImageUrl = (inputUrl: string) => {
   if (!inputUrl) return '';
@@ -278,7 +279,7 @@ export function BlogsTab() {
             </div>
             
             <div className="prose prose-lg max-w-none text-muted-foreground whitespace-pre-wrap">
-              {viewingBlog.content}
+              <LinkifyText text={viewingBlog.content} />
             </div>
           </div>
         </article>
@@ -456,7 +457,7 @@ export function BlogsTab() {
                 {blogs[0].title}
               </h2>
               <p className="text-white/80 line-clamp-2 mb-6 text-lg">
-                {blogs[0].excerpt}
+                <LinkifyText text={blogs[0].excerpt} />
               </p>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-6 text-white/60 text-sm">
@@ -515,7 +516,7 @@ export function BlogsTab() {
                   {blog.title}
                 </h3>
                 <p className="text-muted-foreground mb-6 flex-grow">
-                  {blog.excerpt}
+                  <LinkifyText text={blog.excerpt} />
                 </p>
                 <div className="flex items-center justify-between pt-6 border-t border-border">
                   <div className="flex items-center gap-4 text-muted-foreground text-sm">

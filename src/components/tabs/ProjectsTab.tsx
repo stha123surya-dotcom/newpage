@@ -5,6 +5,7 @@ import { auth, db } from '../../firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-errors';
+import { LinkifyText } from '../LinkifyText';
 
 const formatImageUrl = (inputUrl: string) => {
   if (!inputUrl) return '';
@@ -364,8 +365,8 @@ export function ProjectsTab() {
                 <h3 className="text-xl font-bold mb-3 group-hover:text-accent transition-colors">
                   {project.title}
                 </h3>
-                <p className="text-muted-foreground mb-6 flex-grow text-sm">
-                  {project.description}
+                <p className="text-muted-foreground mb-6 flex-grow text-sm whitespace-pre-wrap">
+                  <LinkifyText text={project.description} />
                 </p>
                 <div className="flex flex-col gap-2 pt-4 border-t border-border text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">

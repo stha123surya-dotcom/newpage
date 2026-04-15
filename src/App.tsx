@@ -19,7 +19,7 @@ export default function App() {
       case 'tools': return <AppToolsTab selectedTool={selectedTool} setSelectedTool={setSelectedTool} />;
       case 'projects': return <ProjectsTab />;
       case 'blogs': return <BlogsTab />;
-      case 'offers': return <OffersTab />;
+      case 'offers': return <OffersTab setActiveTab={setActiveTab} />;
       case 'contact': return <ContactTab />;
       default: return <WebpageTab setActiveTab={setActiveTab} />;
     }

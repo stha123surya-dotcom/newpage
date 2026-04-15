@@ -5,6 +5,7 @@ import { auth, db } from '../../firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-errors';
+import { LinkifyText } from '../LinkifyText';
 
 interface Offer {
   id: string;
@@ -17,7 +18,11 @@ interface Offer {
   createdAt: any;
 }
 
-export function OffersTab() {
+interface OffersTabProps {
+  setActiveTab: (tab: any) => void;
+}
+
+export function OffersTab({ setActiveTab }: OffersTabProps) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -311,8 +316,8 @@ export function OffersTab() {
               )}
               
               <h3 className={`text-2xl md:text-3xl font-bold mb-4 ${isAdmin ? 'mt-6' : ''}`}>{offer.title}</h3>
-              <p className={`mb-8 ${offer.featured ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                {offer.description}
+              <p className={`mb-8 whitespace-pre-wrap ${offer.featured ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                <LinkifyText text={offer.description} />
               </p>
               
               <ul className="space-y-3 mb-8">
@@ -328,7 +333,9 @@ export function OffersTab() {
               
               <div className={`pt-6 border-t ${offer.featured ? 'border-primary-foreground/20' : 'border-border'} flex items-center justify-between`}>
                 <span className="text-sm font-medium opacity-80">Valid until {offer.validUntil}</span>
-                <button className={`px-6 py-2 rounded-full font-semibold transition-transform hover:scale-105 active:scale-95 ${
+                <button 
+                  onClick={() => setActiveTab('contact')}
+                  className={`px-6 py-2 rounded-full font-semibold transition-transform hover:scale-105 active:scale-95 ${
                   offer.featured 
                     ? 'bg-accent text-white' 
                     : 'bg-primary text-primary-foreground'
